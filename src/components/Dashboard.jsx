@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Battery, Flame, Gauge, Leaf, Activity, SlidersHorizontal, PlayCircle, Factory, Truck } from 'lucide-react';
+import { Battery, Flame, Gauge, Leaf, Activity, SlidersHorizontal, PlayCircle, Factory, Truck, AlertTriangle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import DocumentUploader from './DocumentUploader';
 
 function Sparkline({ values = [], color = '#059669' }) {
   const path = useMemo(() => {
@@ -37,7 +38,7 @@ function GaugeRing({ value = 72, color = 'emerald' }) {
   );
 }
 
-export default function Dashboard({ currentPage }) {
+export default function Dashboard({ currentPage, onMetricsUpdate }) {
   const [energy, setEnergy] = useState([420, 410, 415, 400, 398, 392, 389, 395, 390]);
   const [eff, setEff] = useState([78, 79, 77, 80, 81, 82, 83, 84, 82]);
   const [quality, setQuality] = useState([98, 97, 99, 96, 97, 98, 99, 98, 99]);
@@ -45,13 +46,29 @@ export default function Dashboard({ currentPage }) {
 
   useEffect(() => {
     const id = setInterval(() => {
-      setEnergy((prev) => [...prev.slice(1), Math.max(360, Math.min(430, prev[prev.length - 1] + (Math.random() * 10 - 5)))]);
+      setEnergy((prev) => {
+        const next = [...prev.slice(1), Math.max(360, Math.min(430, prev[prev.length - 1] + (Math.random() * 10 - 5)))];
+        return next;
+      });
       setEff((prev) => [...prev.slice(1), Math.max(70, Math.min(95, prev[prev.length - 1] + (Math.random() * 4 - 2)))]);
       setQuality((prev) => [...prev.slice(1), Math.max(92, Math.min(100, prev[prev.length - 1] + (Math.random() * 2 - 1)))]);
       setSust((v) => Math.round(Math.max(40, Math.min(95, v + (Math.random() * 4 - 2)))));
     }, 2000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (onMetricsUpdate) {
+      onMetricsUpdate({
+        energy: energy[energy.length - 1],
+        efficiency: eff[eff.length - 1],
+        quality: quality[quality.length - 1],
+        sustainability: sust,
+        timestamp: Date.now(),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [energy, eff, quality, sust]);
 
   const MetricCard = ({ title, value, unit, icon: Icon, color, series }) => (
     <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -257,17 +274,47 @@ export default function Dashboard({ currentPage }) {
       )}
 
       {currentPage === 'reports' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="p-5 rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-2"><Truck className="w-4 h-4 text-emerald-600" /><h3 className="font-semibold text-slate-900">Monthly Energy Report</h3></div>
-            <p className="text-sm text-slate-600 mb-3">Summary of kWh/t, peak loads, and cost savings.</p>
-            <Sparkline values={energy} color={'#0ea5e9'} />
+            <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-emerald-600" /><h3 className="font-semibold text-slate-900">Real-time Report</h3></div>
+            <p className="text-sm text-slate-600 mb-4">Streaming snapshot of live kWh/t, efficiency, quality index, and ESG score with alerting.</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="text-xs text-slate-500">Energy</div>
+                <div className="text-lg font-semibold text-slate-900">{energy[energy.length - 1]} kWh/t</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="text-xs text-slate-500">Efficiency</div>
+                <div className="text-lg font-semibold text-slate-900">{eff[eff.length - 1]}%</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="text-xs text-slate-500">Quality</div>
+                <div className="text-lg font-semibold text-slate-900">{quality[quality.length - 1]} /100</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="text-xs text-slate-500">Sustainability</div>
+                <div className="text-lg font-semibold text-slate-900">{sust}%</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="p-4 rounded-lg border border-slate-200 bg-white">
+                <div className="text-sm text-slate-600 mb-2">Energy trend</div>
+                <Sparkline values={energy} color={'#0ea5e9'} />
+              </div>
+              <div className="p-4 rounded-lg border border-slate-200 bg-white">
+                <div className="text-sm text-slate-600 mb-2">Quality trend</div>
+                <Sparkline values={quality} color={'#8b5cf6'} />
+              </div>
+            </div>
+            {(energy[energy.length-1] > 420 || quality[quality.length-1] < 95) && (
+              <div className="mt-4 p-3 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 inline-flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Heads up: Energy spike or quality dip detected. AI copilot will propose adjustments.</span>
+              </div>
+            )}
           </div>
-          <div className="p-5 rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-2"><Activity className="w-4 h-4 text-emerald-600" /><h3 className="font-semibold text-slate-900">Quality Trends</h3></div>
-            <p className="text-sm text-slate-600 mb-3">Fineness, residues, and corrective actions.</p>
-            <Sparkline values={quality} color={'#8b5cf6'} />
-          </div>
+
+          <DocumentUploader />
         </div>
       )}
     </div>

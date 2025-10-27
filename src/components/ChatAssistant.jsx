@@ -12,14 +12,15 @@ function TypingDots() {
   );
 }
 
-export default function ChatAssistant() {
+export default function ChatAssistant({ contextMetrics }) {
   const [open, setOpen] = useState(true);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hi! I\'m your CemAI copilot. Ask me about energy, quality, or sustainability, or simulate process parameters.' },
+    { role: 'assistant', content: "Hi! I'm your CemAI copilot. I watch live metrics and can suggest safe setpoint changes. Ask about energy, quality, or sustainability." },
   ]);
   const [typing, setTyping] = useState(false);
   const listRef = useRef(null);
+  const lastAlertRef = useRef(0);
 
   useEffect(() => {
     if (listRef.current) {
@@ -27,10 +28,35 @@ export default function ChatAssistant() {
     }
   }, [messages, typing]);
 
+  // Auto-react to metric anomalies, rate-limited to once every 20s
+  useEffect(() => {
+    if (!contextMetrics) return;
+    const now = Date.now();
+    if (now - lastAlertRef.current < 20000) return;
+    const { energy, quality, efficiency, sustainability } = contextMetrics;
+    let alert = '';
+    if (energy > 420) {
+      alert = `Live alert: Energy at ${energy} kWh/t. Suggest shifting 10-15% grinding to off-peak and +5% separator speed → ~5% kWh/t reduction.`;
+    } else if (quality < 95) {
+      alert = `Quality dip: Index at ${quality}/100. Recommend holding mill DP at 75 mbar and reducing feed by 3% for stability.`;
+    } else if (sustainability < 60) {
+      alert = `Sustainability score ${sustainability}. Consider +6% alt fuels (RDF:biomass 60:40) → -17 kcal/kg clinker, lower CO₂.`;
+    } else if (efficiency < 75) {
+      alert = `Efficiency at ${efficiency}%. Tune recirculation +8% and check fan curves to reduce slip losses.`;
+    }
+    if (alert) {
+      lastAlertRef.current = now;
+      setTyping(true);
+      setTimeout(() => {
+        setMessages((m) => [...m, { role: 'assistant', content: alert }]);
+        setTyping(false);
+      }, 600);
+    }
+  }, [contextMetrics]);
+
   const respond = (q) => {
-    // Rudimentary on-device reasoning for demo purposes
     const lower = q.toLowerCase();
-    let reply = 'Here\'s a cross-process insight: blending raw meal variability with kiln feed stability can shave 2-4% energy while keeping LSF/SM/AM on target.';
+    let reply = "Here's a cross-process insight: blending raw meal variability with kiln feed stability can shave 2-4% energy while keeping LSF/SM/AM on target.";
     if (lower.includes('energy') || lower.includes('power') || lower.includes('kwh')) {
       reply = 'Live energy tip: Shift 12% of grinding to off-peak hours and increase VRM recirculation by 8% → estimated -5.2% kWh/t cement.';
     } else if (lower.includes('quality') || lower.includes('fineness') || lower.includes('blaine')) {
@@ -76,7 +102,7 @@ export default function ChatAssistant() {
           >
             <div className="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50">
               <div className="flex items-center gap-2 text-slate-800 font-medium"><Bot className="w-4 h-4" /> AI Insights</div>
-              <div className="text-xs text-slate-500">Powered by Gemini (placeholder)</div>
+              <div className="text-xs text-slate-500">Auto-reacts to live data • Gemini-ready</div>
             </div>
             <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/60">
               {messages.map((m, i) => (

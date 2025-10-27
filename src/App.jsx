@@ -7,9 +7,9 @@ import ChatAssistant from './components/ChatAssistant';
 function App() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [lastMetrics, setLastMetrics] = useState(null);
 
   const handleLogin = () => {
-    // This is a client-side mock. Hook up Firebase Auth later.
     setIsAuthed(true);
   };
 
@@ -34,7 +34,7 @@ function App() {
           <div className="px-4 sm:px-6 lg:px-8 pt-6">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-baseline justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">{currentPage === 'dashboard' ? 'Main Dashboard' : currentPage === 'admin' ? 'Admin Dashboard' : 'Reports'}</h2>
+                <h2 className="text-2xl font-bold tracking-tight">{currentPage === 'dashboard' ? 'Main Dashboard' : currentPage === 'admin' ? 'Admin Dashboard' : 'Reports & Documents'}</h2>
                 <div className="hidden md:flex items-center gap-2 text-sm">
                   <span className={`px-3 py-1 rounded-full border ${currentPage==='dashboard' ? 'bg-white' : 'bg-transparent'} cursor-pointer`} onClick={()=>setCurrentPage('dashboard')}>Dashboard</span>
                   <span className={`px-3 py-1 rounded-full border ${currentPage==='admin' ? 'bg-white' : 'bg-transparent'} cursor-pointer`} onClick={()=>setCurrentPage('admin')}>Admin</span>
@@ -43,8 +43,8 @@ function App() {
               </div>
             </div>
           </div>
-          <Dashboard currentPage={currentPage} />
-          <ChatAssistant />
+          <Dashboard currentPage={currentPage} onMetricsUpdate={setLastMetrics} />
+          <ChatAssistant contextMetrics={lastMetrics} />
         </>
       )}
 
